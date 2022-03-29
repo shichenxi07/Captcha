@@ -70,6 +70,8 @@ def run_training():
     targets_enc = np.array(targets_enc)
     targets_enc = targets_enc + 1
 
+
+
     (
         train_imgs,
         test_imgs,
@@ -77,9 +79,13 @@ def run_training():
         test_targets,
         _,
         test_targets_orig,
-    )= model_selection.train_test_split(
-        image_files,targets_enc,targets_orig,test_size=0.1,random_state=42
+    ) = model_selection.train_test_split(
+        image_files, targets_enc, targets_orig, test_size=0.1, random_state=42
     )
+
+
+
+
 
     train_dataset = dataset.Classification(
         image_paths=train_imgs,
