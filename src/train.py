@@ -10,12 +10,47 @@ import torch
 import numpy as np
 from sklearn import preprocessing, model_selection
 from sklearn import metrics
-
+from pprint import pprint
 
 import config
 import dataset
 from model import CaptchaModel
 import engine
+
+
+def remove_duplicates(x):
+    if len(x) < 2:
+        return x
+    fin = ""
+    for j in x:
+        if fin == "":
+            fin = j
+        else:
+            if j == fin[-1]:
+                continue
+            else:
+                fin = fin + j
+    return fin
+
+def decode_predictions(preds, encoder):
+    preds = preds.permute(1,0,2)
+    preds = torch.softmax(preds,2)
+    preds = torch.argmax(preds,2)
+    preds = torch.detach().cpu().numpy()
+    cap_preds = []
+    for j in range(preds.shape[0]):
+        temp = []
+        for k in preds[j, :]:
+            k = k - 1
+            if k == -1:
+                temp.append("^")
+            else:
+                temp.append(encoder.inverse_transform([k][0]))
+        tp = "".join(temp).replace("^","")
+        cap_preds.append(remove_duplicates(tp))
+    return cap_preds
+
+
 
 
 
@@ -78,9 +113,20 @@ def run_training():
     )
     for epoch in range(config.EPOCHS):
         train_loss = engine.train_fn(model, train_loader, optimizer)
-        valid_preds, valid_loss = engine.eval_fn(model, test_loader)
+        valid_preds, test_loss = engine.eval_fn(model, test_loader)
+        valid_cap_preds=[]
+        for vp in valid_preds:
+            current_preds = decode_predictions(vp, lbl_enc)
+            valid_cap_preds.extend(current_preds)
+        combined = list(zip(test_targets_orig,valid_cap_preds))
+        test_dum_rem = [remove_duplicates(c) for c in test_targets_orig]
+        accuracy = metrics.accuracy_score(test_dum_rem, valid_cap_preds)
 
 
+
+
+        print(f"Epoch:{epoch}, train_loss={train_loss},valid_loss={valid_loss}")
+        scheduler.step(test_loss)
 
 
     # print(targets_enc)
